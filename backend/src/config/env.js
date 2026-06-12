@@ -39,6 +39,9 @@ const config = {
     password: process.env.PGPASSWORD || 'postgres',
     name: process.env.PGDATABASE || 'drug_interactions',
     logging: String(process.env.DB_LOGGING).toLowerCase() === 'true',
+    // Supabase (and most hosted Postgres) require SSL. Defaults to true unless
+    // explicitly disabled, e.g. DB_SSL=false for a plain local Postgres.
+    ssl: String(process.env.DB_SSL ?? 'true').toLowerCase() === 'true',
   },
 };
 

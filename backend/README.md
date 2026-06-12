@@ -14,7 +14,7 @@ It does **no** machine learning. Its jobs are:
 ## Stack
 
 - Express 4 + CORS + morgan
-- PostgreSQL via Sequelize (`pg`)
+- Supabase (PostgreSQL) via Sequelize (`pg`)
 - axios for the upstream microservice calls
 
 ## Project layout
@@ -52,11 +52,10 @@ src/
    npm install
    ```
 
-2. Create the PostgreSQL database (once):
-
-   ```sql
-   CREATE DATABASE drug_interactions;
-   ```
+2. Provision a [Supabase](https://supabase.com) project. The `postgres` database
+   already exists — no manual `CREATE DATABASE` is needed. Grab the connection
+   string from **Project Settings > Database** (Connection pooling / Transaction,
+   port 6543 is recommended).
 
 3. Configure environment — copy and edit:
 
@@ -64,7 +63,8 @@ src/
    cp .env.example .env
    ```
 
-   Key vars: `DATABASE_URL` (or `PG*`), `ML_SERVICE_URL`, `CLIENT_ORIGIN`, `PORT`.
+   Key vars: `DATABASE_URL` (or `PG*`), `DB_SSL` (true for Supabase),
+   `ML_SERVICE_URL`, `CLIENT_ORIGIN`, `PORT`.
 
 4. Run:
 
