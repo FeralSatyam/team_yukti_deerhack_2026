@@ -1,15 +1,4 @@
-"use client";
-
 import { useEffect, useId, useRef, useState } from "react";
-
-interface SearchComboboxProps {
-  label: string;
-  placeholder: string;
-  options: string[];
-  onSearch: (query: string) => string[];
-  onSelect: (value: string) => void;
-  disabled?: boolean;
-}
 
 export function SearchCombobox({
   label,
@@ -18,12 +7,12 @@ export function SearchCombobox({
   onSearch,
   onSelect,
   disabled = false,
-}: SearchComboboxProps) {
+}) {
   const id = useId();
   const listId = `${id}-listbox`;
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef(null);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<string[]>([]);
+  const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
 
@@ -40,7 +29,7 @@ export function SearchCombobox({
     setHighlightIndex(filtered.length > 0 ? 0 : -1);
   }, [query, excludeOptions, onSearch]);
 
-  function selectItem(value: string) {
+  function selectItem(value) {
     onSelect(value);
     setQuery("");
     setResults([]);
@@ -49,7 +38,7 @@ export function SearchCombobox({
     inputRef.current?.focus();
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  function handleKeyDown(e) {
     if (!isOpen || results.length === 0) {
       if (e.key === "ArrowDown" && query.trim()) setIsOpen(true);
       return;

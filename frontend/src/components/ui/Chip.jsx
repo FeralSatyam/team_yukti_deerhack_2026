@@ -1,18 +1,10 @@
-interface ChipProps {
-  label: string;
-  onRemove?: () => void;
-  variant?: "default" | "suggestion";
-  selected?: boolean;
-  onClick?: () => void;
-}
-
 export function Chip({
   label,
   onRemove,
   variant = "default",
   selected = false,
   onClick,
-}: ChipProps) {
+}) {
   const isSuggestion = variant === "suggestion";
 
   if (isSuggestion) {
