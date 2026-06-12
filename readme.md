@@ -14,7 +14,7 @@ When drugs are co-prescribed, they can interact through shared protein targets a
 
 ## Dataset
 
-Source: [DECAGON — Stanford SNAP](http://snap.stanford.edu/decagon/)  
+Source: [DECAGON - Stanford SNAP](http://snap.stanford.edu/decagon/)  
 Reference: Zitnik, Agrawal & Leskovec, *Bioinformatics* 2018
 
 | File | Rows | Used For |
@@ -28,13 +28,13 @@ Reference: Zitnik, Agrawal & Leskovec, *Bioinformatics* 2018
 
 **Graph:** 21,257 nodes (2,135 drugs + 19,122 proteins), 1,820,238 edges  
 **Labels:** 63,473 drug pairs evaluated against 1,317 side effects  
-**Harmful pairs:** 19,173 (30.2%) — defined as pairs sharing ≥20 severe systemic side effects
+**Harmful pairs:** 19,173 (30.2%) - defined as pairs sharing >=20 severe systemic side effects
 
 ---
 
 ## Model
 
-**DrugInteractionGNN** — three-stage architecture:
+**DrugInteractionGNN** - three-stage architecture:
 
 **1. Encoder (GraphSAGE, 2 layers)**  
 Reads the full drug-protein-protein graph and produces a 128-dimensional embedding per node. Drug nodes are initialised from 18,355-dim feature vectors (2,048-dim Morgan fingerprint + 16,307-dim individual side effect profile). Protein nodes use learned embeddings.
@@ -78,7 +78,7 @@ On 6,348 held-out test pairs: 1,638 true positives, 280 false negatives, 547 fal
 
 ![Score Distribution](presentation_charts/05_score_distribution.png)
 
-The model produces well-separated score distributions — safe pairs cluster near 0, harmful pairs near 1, with a clean decision boundary at 0.5.
+The model produces well-separated score distributions - safe pairs cluster near 0, harmful pairs near 1, with a clean decision boundary at 0.5.
 
 ![Radar Chart](presentation_charts/6_radar_chart.png)
 
@@ -167,3 +167,20 @@ To retrain from scratch, run all cells in `drug_interaction_gnn.ipynb` in order.
 ```bash
 zip -r gnn_colab_assets.zip data/processed/ data/mappings/
 ```
+
+---
+
+## References
+
+**Dataset**
+
+- Zitnik M, Agrawal M, Leskovec J. Modeling polypharmacy side effects with graph convolutional networks. *Bioinformatics* 34.13 (2018): i457-i466. [paper](https://academic.oup.com/bioinformatics/article/34/13/i457/5045770)
+- DECAGON dataset and download: [snap.stanford.edu/decagon](http://snap.stanford.edu/decagon/)
+- SIDER side effect database: [sideeffects.embl.de](http://sideeffects.embl.de/download/) - files `meddra_all_se.tsv` and `meddra_freq.tsv`
+- ChEMBL molecular structures: [ebi.ac.uk/chembl](https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/) - file `chembl_37_chemreps.txt`
+
+**Model**
+
+- Hamilton WL, Ying R, Leskovec J. Inductive representation learning on large graphs. *NeurIPS* 2017. [paper](https://arxiv.org/abs/1706.02216)
+- Rogers D, Hahn M. Extended-connectivity fingerprints. *J. Chem. Inf. Model.* 50.5 (2010): 742-754.
+- Fey M, Lenssen JE. Fast graph representation learning with PyTorch Geometric. *ICLR Workshop* 2019.
