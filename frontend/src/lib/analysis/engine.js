@@ -1,13 +1,4 @@
-import type {
-  AnalysisRequest,
-  AnalysisResult,
-  CauseRanking,
-  DetectedInteraction,
-  InteractionSeverity,
-  RiskLevel,
-} from "@/lib/types";
-
-const DRUG_SIDE_EFFECTS: Record<string, string[]> = {
+const DRUG_SIDE_EFFECTS = {
   Metformin: ["Nausea", "Vomiting", "Diarrhea", "Abdominal Pain", "Fatigue"],
   Ondansetron: ["Headache", "Constipation", "Dizziness", "Fatigue"],
   Amoxicillin: ["Nausea", "Vomiting", "Diarrhea", "Rash", "Headache"],
@@ -28,7 +19,7 @@ const DRUG_SIDE_EFFECTS: Record<string, string[]> = {
   Azithromycin: ["Nausea", "Vomiting", "Diarrhea", "Abdominal Pain"],
 };
 
-const DRUG_INTERACTIONS: Record<string, Record<string, { severity: InteractionSeverity; symptoms: string[] }>> = {
+const DRUG_INTERACTIONS = {
   Metformin: {
     Ondansetron: {
       severity: "moderate",
@@ -87,11 +78,11 @@ const DRUG_INTERACTIONS: Record<string, Record<string, { severity: InteractionSe
   },
 };
 
-function normalizeSymptom(s: string): string {
+function normalizeSymptom(s) {
   return s.toLowerCase().trim();
 }
 
-function symptomMatch(reported: string[], known: string[]): number {
+function symptomMatch(reported, known) {
   if (reported.length === 0 || known.length === 0) return 0;
   const reportedNorm = reported.map(normalizeSymptom);
   const matches = known.filter((k) =>
@@ -102,14 +93,14 @@ function symptomMatch(reported: string[], known: string[]): number {
   return matches.length / reported.length;
 }
 
-function getDrugLikelihood(med: string, symptoms: string[]): number {
+function getDrugLikelihood(med, symptoms) {
   const sideEffects = DRUG_SIDE_EFFECTS[med] ?? [];
   const match = symptomMatch(symptoms, sideEffects);
   const base = sideEffects.length > 0 ? 0.35 + match * 0.55 : 0.15 + match * 0.2;
   return Math.min(0.95, Math.round(base * 100));
 }
 
-function getCombinationLikelihood(meds: [string, string], symptoms: string[]): number {
+function getCombinationLikelihood(meds, symptoms) {
   const [a, b] = meds;
   const interaction = DRUG_INTERACTIONS[a]?.[b] ?? DRUG_INTERACTIONS[b]?.[a];
   if (!interaction) {
@@ -129,9 +120,9 @@ function getCombinationLikelihood(meds: [string, string], symptoms: string[]): n
   return Math.min(95, Math.round((0.45 + match * 0.4 + severityBoost) * 100));
 }
 
-function findInteractions(medications: string[], symptoms: string[]): DetectedInteraction[] {
-  const found: DetectedInteraction[] = [];
-  const seen = new Set<string>();
+function findInteractions(medications, symptoms) {
+  const found = [];
+  const seen = new Set();
 
   for (let i = 0; i < medications.length; i++) {
     for (let j = i + 1; j < medications.length; j++) {
@@ -165,8 +156,8 @@ function findInteractions(medications: string[], symptoms: string[]): DetectedIn
   });
 }
 
-function buildRankings(medications: string[], symptoms: string[]): CauseRanking[] {
-  const items: { label: string; likelihood: number }[] = [];
+function buildRankings(medications, symptoms) {
+  const items = [];
 
   for (const med of medications) {
     items.push({ label: med, likelihood: getDrugLikelihood(med, symptoms) });
@@ -195,15 +186,12 @@ function buildRankings(medications: string[], symptoms: string[]): CauseRanking[
   }));
 }
 
-function calculateOverallRisk(
-  rankings: CauseRanking[],
-  interactions: DetectedInteraction[]
-): { level: RiskLevel; score: number; confidence: number } {
+function calculateOverallRisk(rankings, interactions) {
   const topLikelihood = rankings[0]?.likelihood ?? 0;
   const hasCritical = interactions.some((i) => i.severity === "critical");
   const hasHigh = interactions.some((i) => i.severity === "high");
 
-  let level: RiskLevel = "low";
+  let level = "low";
   if (hasCritical || topLikelihood >= 85) level = "critical";
   else if (hasHigh || topLikelihood >= 70) level = "high";
   else if (topLikelihood >= 45 || interactions.length > 0) level = "moderate";
@@ -222,15 +210,10 @@ function calculateOverallRisk(
   return { level, score, confidence };
 }
 
-function buildReasoning(
-  medications: string[],
-  symptoms: string[],
-  rankings: CauseRanking[],
-  interactions: DetectedInteraction[]
-): string {
+function buildReasoning(medications, symptoms, rankings, interactions) {
   const top = rankings[0];
   const symptomList = symptoms.slice(0, 3).join(" and ").toLowerCase();
-  const parts: string[] = [];
+  const parts = [];
 
   if (top) {
     if (top.label.includes("+")) {
@@ -271,15 +254,10 @@ function buildReasoning(
   return parts.slice(0, 3).join(" ");
 }
 
-function buildRecommendations(
-  level: RiskLevel,
-  confidence: number,
-  interactions: DetectedInteraction[],
-  topCause?: CauseRanking
-): string[] {
+function buildRecommendations(level, confidence, interactions, topCause) {
   if (confidence < 75) return [];
 
-  const recs: string[] = [];
+  const recs = [];
 
   if (level === "critical" || interactions.some((i) => i.severity === "critical")) {
     recs.push("Review this combination urgently and consider discontinuing or substituting a medication");
@@ -298,7 +276,7 @@ function buildRecommendations(
   return recs.slice(0, 4);
 }
 
-export function analyzeMedicationRisk(request: AnalysisRequest): AnalysisResult {
+export function analyzeMedicationRisk(request) {
   const { medications, symptoms } = request;
   const interactions = findInteractions(medications, symptoms);
   const rankings = buildRankings(medications, symptoms);

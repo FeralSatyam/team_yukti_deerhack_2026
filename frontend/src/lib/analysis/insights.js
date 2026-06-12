@@ -1,14 +1,6 @@
 import { analyzeMedicationRisk } from "@/lib/analysis/engine";
-import type {
-  CauseInsight,
-  CauseInsightType,
-  DetectedInteraction,
-  InteractionSeverity,
-  PreviewAnalysis,
-  VisualSeverity,
-} from "@/lib/types";
 
-const SIDE_EFFECT_EXPLANATIONS: Record<string, Record<string, string>> = {
+const SIDE_EFFECT_EXPLANATIONS = {
   Metformin: {
     Nausea: "Metformin commonly causes GI upset, especially when initiating therapy or at higher doses.",
     Vomiting: "Gastrointestinal intolerance is a well-documented adverse effect of metformin.",
@@ -33,7 +25,7 @@ const SIDE_EFFECT_EXPLANATIONS: Record<string, Record<string, string>> = {
   },
 };
 
-const INTERACTION_EXPLANATIONS: Record<string, string> = {
+const INTERACTION_EXPLANATIONS = {
   "Metformin|Ondansetron":
     "Combining metformin with ondansetron may compound gastrointestinal effects. Both agents can affect gut motility and tolerance.",
   "Warfarin|Ibuprofen":
@@ -44,22 +36,17 @@ const INTERACTION_EXPLANATIONS: Record<string, string> = {
     "Additive serotonergic effects may increase CNS side effects including headache and confusion.",
 };
 
-function toVisualSeverity(severity: InteractionSeverity): VisualSeverity {
+function toVisualSeverity(severity) {
   if (severity === "critical" || severity === "high") return "high";
   if (severity === "moderate") return "moderate";
   return "low";
 }
 
-function interactionKey(a: string, b: string): string {
+function interactionKey(a, b) {
   return [a, b].sort().join("|");
 }
 
-function getDetailedExplanation(
-  type: CauseInsightType,
-  medications: string[],
-  symptoms: string[],
-  severity: VisualSeverity
-): string {
+function getDetailedExplanation(type, medications, symptoms, severity) {
   if (type === "interaction" && medications.length === 2) {
     const key = interactionKey(medications[0], medications[1]);
     const specific = INTERACTION_EXPLANATIONS[key];
@@ -79,11 +66,7 @@ function getDetailedExplanation(
   return `The symptom pattern of ${symptoms.join(", ").toLowerCase()} aligns with known adverse effect profiles for ${medications.join(" and ")}. Correlation does not confirm causation — evaluate timing, dose changes, and alternative diagnoses.`;
 }
 
-function buildHeadline(
-  type: CauseInsightType,
-  medications: string[],
-  symptoms: string[]
-): string {
+function buildHeadline(type, medications, symptoms) {
   const symptomText =
     symptoms.length > 0
       ? symptoms.slice(0, 4).join(", ").toLowerCase()
@@ -98,14 +81,9 @@ function buildHeadline(
   return `${medications[0]} may be linked to ${symptomText}`;
 }
 
-function insightFromInteraction(
-  interaction: DetectedInteraction,
-  rank: number,
-  likelihood: number,
-  confidence: number
-): CauseInsight {
+function insightFromInteraction(interaction, rank, likelihood, confidence) {
   const severity = toVisualSeverity(interaction.severity);
-  const type: CauseInsightType = "interaction";
+  const type = "interaction";
 
   return {
     id: `interaction-${interaction.medications.join("-")}`,
@@ -127,13 +105,7 @@ function insightFromInteraction(
   };
 }
 
-function insightFromRanking(
-  label: string,
-  likelihood: number,
-  rank: number,
-  confidence: number,
-  patientSymptoms: string[]
-): CauseInsight | null {
+function insightFromRanking(label, likelihood, rank, confidence, patientSymptoms) {
   const isCombo = label.includes(" + ");
 
   if (isCombo) {
@@ -142,7 +114,7 @@ function insightFromRanking(
       patientSymptoms.length > 0
         ? patientSymptoms.slice(0, 3)
         : ["nausea", "dizziness", "fatigue"];
-    const severity: VisualSeverity =
+    const severity =
       likelihood >= 70 ? "high" : likelihood >= 45 ? "moderate" : "low";
 
     return {
@@ -169,7 +141,7 @@ function insightFromRanking(
     patientSymptoms.length > 0
       ? patientSymptoms.slice(0, 3)
       : ["fatigue", "nausea", "headache"];
-  const severity: VisualSeverity =
+  const severity =
     likelihood >= 65 ? "moderate" : likelihood >= 40 ? "moderate" : "low";
 
   return {
@@ -196,15 +168,12 @@ function insightFromRanking(
   };
 }
 
-export function buildPreviewAnalysis(
-  medications: string[],
-  symptoms: string[] = []
-): PreviewAnalysis | null {
+export function buildPreviewAnalysis(medications, symptoms = []) {
   if (medications.length < 2) return null;
 
   const result = analyzeMedicationRisk({ medications, symptoms });
-  const insights: CauseInsight[] = [];
-  const seen = new Set<string>();
+  const insights = [];
+  const seen = new Set();
 
   result.interactions.forEach((interaction, index) => {
     const matchingRank = result.rankings.find((r) => {
@@ -265,10 +234,7 @@ export function buildPreviewAnalysis(
   };
 }
 
-export function getPrimaryInsight(
-  preview: PreviewAnalysis | null,
-  allMedications: string[] = []
-): CauseInsight | null {
+export function getPrimaryInsight(preview, allMedications = []) {
   if (!preview || preview.insights.length === 0) return null;
 
   const interactionInsight = preview.insights.find(

@@ -1,9 +1,4 @@
-import type { CauseInsight } from "@/lib/types";
-
-export function resolveMedicinePair(
-  insight: CauseInsight,
-  allMedications: string[]
-): [string, string] {
+export function resolveMedicinePair(insight, allMedications) {
   if (insight.medications.length >= 2) {
     return [insight.medications[0], insight.medications[1]];
   }
