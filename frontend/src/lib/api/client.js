@@ -2,9 +2,9 @@
 // (credentials: "include") so authenticated requests work once logged in, and
 // normalizes error responses into a thrown Error carrying the HTTP status.
 
-const BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
-).replace(/\/+$/, "");
+// Defaults to the same-origin "/api" proxy (see vite.config.js). Set
+// VITE_API_URL to call an absolute backend URL instead.
+const BASE_URL = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "");
 
 export class ApiError extends Error {
   constructor(status, message, details) {
