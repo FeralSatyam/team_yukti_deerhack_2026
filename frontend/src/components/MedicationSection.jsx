@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Loader2, ScanSearch } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,33 @@ export function MedicationSection({
   onAnalyze,
   isAnalyzing = false,
   disabled = false,
+  drugCatalog = null,
 }) {
   const canAnalyze = medications.length >= 2 && !isAnalyzing;
+
+  // When the ML catalog is available and contains human-readable names (not
+  // raw STITCH IDs), use it as the suggestion pool. Otherwise fall back to
+  // the static list. STITCH IDs look like "CID000xxxxxx" — not useful for search.
+  const catalogNames = useMemo(() => {
+    if (!Array.isArray(drugCatalog) || drugCatalog.length === 0) return null;
+    const hasStitchIds = drugCatalog[0]?.startsWith?.("CID");
+    if (hasStitchIds) return null; // catalog is STITCH IDs — not searchable by name
+    return drugCatalog;
+  }, [drugCatalog]);
+
+  const onSearch = useMemo(() => {
+    if (!catalogNames) return searchMedications;
+    return (query) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return catalogNames.slice(0, 20);
+      const matches = catalogNames.filter((n) => n.toLowerCase().includes(q));
+      return matches.sort((a, b) => {
+        const aP = a.toLowerCase().startsWith(q) ? 0 : 1;
+        const bP = b.toLowerCase().startsWith(q) ? 0 : 1;
+        return aP - bP || a.localeCompare(b);
+      });
+    };
+  }, [catalogNames]);
 
   return (
     <section
@@ -33,7 +59,7 @@ export function MedicationSection({
             label="Search medication"
             placeholder="Search medication name..."
             options={medications}
-            onSearch={searchMedications}
+            onSearch={onSearch}
             onSelect={onAdd}
             disabled={disabled}
           />
