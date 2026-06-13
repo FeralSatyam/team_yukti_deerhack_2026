@@ -75,42 +75,30 @@ export function mlResultToPreview(mlResult, medications) {
   const confidence = Math.round(mlResult.confidence * 100);
   const pairs      = buildPairs(medications);
 
-  // Build an interactions[] entry for each pair
+  // Build an interactions[] entry for each pair.
+  // Severity is derived solely from pair_harm_score so it always matches the badge.
   const interactions = pairs.map(([drugA, drugB], idx) => {
-    const detail = mlResult.pair_details[idx] ?? {};
-    const score  = typeof detail.pair_harm_score === "number" ? detail.pair_harm_score : mlResult.confidence;
-
-    // Find side effects for this pair from the global list (top by probability)
-    const pairSeNames = Array.isArray(detail.top_side_effects)
-      ? detail.top_side_effects
-      : [];
-
-    // Check if any matching global SE is CRITICAL
-    const hasCritical = mlResult.side_effects.some(
-      (se) => pairSeNames.includes(se.name) && se.severity === "CRITICAL"
-    );
-
+    const detail      = mlResult.pair_details[idx] ?? {};
+    const score       = typeof detail.pair_harm_score === "number" ? detail.pair_harm_score : mlResult.confidence;
+    const pairSeNames = Array.isArray(detail.top_side_effects) ? detail.top_side_effects : [];
     return {
-      medications:       [drugA, drugB],
+      medications:        [drugA, drugB],
       associatedSymptoms: pairSeNames.slice(0, 3),
-      severity:           harmScoreToSeverity(score, hasCritical),
+      severity:           harmScoreToSeverity(score),
+      _score:             score,
     };
   });
 
   // Build insights[] — one per pair, plus top global side effects as extras
   const insights = [];
 
-  // One insight per drug pair only — no global SE fill to avoid duplicate combo labels.
+  // One insight per drug pair only — severity matches the badge (harm score only).
   pairs.forEach(([drugA, drugB], idx) => {
     if (insights.length >= 5) return;
-    const detail   = mlResult.pair_details[idx] ?? {};
-    const score    = typeof detail.pair_harm_score === "number" ? detail.pair_harm_score : mlResult.confidence;
-    // Top 3 highest-probability symptoms for this specific pair
-    const symptoms = (Array.isArray(detail.top_side_effects) ? detail.top_side_effects : []).slice(0, 3);
-    const hasCritical = mlResult.side_effects.some(
-      (se) => symptoms.includes(se.name) && se.severity === "CRITICAL"
-    );
-    const severity   = harmScoreToSeverity(score, hasCritical);
+    const detail     = mlResult.pair_details[idx] ?? {};
+    const score      = typeof detail.pair_harm_score === "number" ? detail.pair_harm_score : mlResult.confidence;
+    const symptoms   = (Array.isArray(detail.top_side_effects) ? detail.top_side_effects : []).slice(0, 3);
+    const severity   = harmScoreToSeverity(score);
     const likelihood = Math.round(score * 100);
 
     insights.push({
@@ -136,7 +124,12 @@ export function mlResultToPreview(mlResult, medications) {
   insights.sort(bySeverityDesc);
   insights.forEach((item, i) => { item.rank = i + 1; });
 
-  const sortedInteractions = [...interactions].sort(bySeverityDesc);
+  const sortedInteractions = [...interactions]
+    .sort((a, b) =>
+      (SEVERITY_ORDER[a.severity] ?? 3) - (SEVERITY_ORDER[b.severity] ?? 3) ||
+      b._score - a._score
+    )
+    .map(({ _score, ...rest }) => rest); // strip internal field
 
   const hasSignificantFindings =
     mlResult.harmful ||

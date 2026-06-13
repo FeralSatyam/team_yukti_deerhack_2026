@@ -29,9 +29,10 @@ const OVERALL = {
 };
 
 const SEVERITY = {
-  high: { dot: "bg-red-500", badge: "bg-red-50 text-red-700", label: "Major" },
+  critical: { dot: "bg-red-600", badge: "bg-red-100 text-red-800", label: "Critical" },
+  high:     { dot: "bg-red-500", badge: "bg-red-50 text-red-700",   label: "Major" },
   moderate: { dot: "bg-amber-500", badge: "bg-amber-50 text-amber-700", label: "Moderate" },
-  low: { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700", label: "Minor" },
+  low:      { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700", label: "Minor" },
 };
 
 
