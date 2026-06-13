@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { ScanSearch, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Header } from "@/components/Header";
@@ -22,43 +22,53 @@ export function AnalyzerApp() {
   } = usePatients();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // The committed analysis result — only set when Analyze is pressed.
+  const [analysis, setAnalysis] = useState(null);
   const [previewKey, setPreviewKey] = useState(0);
-  // Avoids re-recording history for a medication set we just saved.
+  // Avoids re-recording history when re-analyzing the same medication set.
   const lastSavedSignature = useRef(null);
 
-  const preview = medications.length >= 2 ? buildPreviewAnalysis(medications) : null;
-  const primaryInsight = getPrimaryInsight(preview, medications);
-  const isReportReady = medications.length >= 2 && !!primaryInsight && !isAnalyzing;
+  const signature = useMemo(
+    () => [...medications].sort().join("|"),
+    [medications]
+  );
 
   const reportData = useMemo(() => {
-    if (!preview || !primaryInsight) return null;
-    const [medicineA, medicineB] = resolveMedicinePair(primaryInsight, medications);
-    return { medications, insight: primaryInsight, preview, medicineA, medicineB };
-  }, [medications, preview, primaryInsight]);
+    if (!analysis) return null;
+    const { preview, primaryInsight, medications: meds } = analysis;
+    const [medicineA, medicineB] = resolveMedicinePair(primaryInsight, meds);
+    return { medications: meds, insight: primaryInsight, preview, medicineA, medicineB };
+  }, [analysis]);
 
-  // Reset the analyzing flag and saved-signature when the patient changes.
+  const isReportReady = !!analysis && !isAnalyzing;
+
+  // Clear stale results whenever the medication set or patient changes, so the
+  // doctor always re-runs Analyze against the current list.
   useEffect(() => {
-    lastSavedSignature.current = null;
+    setAnalysis(null);
     setIsAnalyzing(false);
-  }, [currentPatientId]);
+  }, [signature, currentPatientId]);
 
-  useEffect(() => {
-    if (medications.length < 2) {
-      setIsAnalyzing(false);
-      return;
-    }
+  const runAnalysis = useCallback(() => {
+    if (medications.length < 2 || isAnalyzing) return;
 
     setIsAnalyzing(true);
-    const timer = setTimeout(() => {
-      setIsAnalyzing(false);
+    // Brief pause so the analyzing state is visible; this is also the single
+    // place a real /api/predict call would be issued.
+    const snapshot = [...medications];
+    setTimeout(() => {
+      const preview = buildPreviewAnalysis(snapshot);
+      const primaryInsight = getPrimaryInsight(preview, snapshot);
+      setAnalysis({ preview, primaryInsight, medications: snapshot });
       setPreviewKey((k) => k + 1);
+      setIsAnalyzing(false);
 
-      // Record this combination once per distinct medication set.
-      const signature = [...medications].sort().join("|");
-      if (primaryInsight && signature !== lastSavedSignature.current) {
-        lastSavedSignature.current = signature;
+      // Record the run once per distinct medication set (server call).
+      const sig = [...snapshot].sort().join("|");
+      if (primaryInsight && sig !== lastSavedSignature.current) {
+        lastSavedSignature.current = sig;
         saveAnalysis({
-          medications,
+          medications: snapshot,
           riskLevel: severityToRisk(primaryInsight.severity),
           result: {
             headline: primaryInsight.headline,
@@ -69,10 +79,7 @@ export function AnalyzerApp() {
         });
       }
     }, 600);
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medications]);
+  }, [medications, isAnalyzing, saveAnalysis]);
 
   const addMedication = useCallback(
     (med) => {
@@ -119,24 +126,38 @@ export function AnalyzerApp() {
               medications={medications}
               onAdd={addMedication}
               onRemove={removeMedication}
+              onAnalyze={runAnalysis}
+              isAnalyzing={isAnalyzing}
             />
 
-            {medications.length < 2 && (
-              <div className="rounded-xl border border-dashed border-[var(--border)] bg-white px-6 py-12 text-center">
-                <p className="text-sm font-medium text-[var(--muted)]">
-                  Add at least 2 medications to see how their combination may
-                  affect {currentPatient.name.split(" ")[0]}
-                </p>
-              </div>
+            {isAnalyzing && (
+              <ResultsPanel medications={medications} preview={null} isAnalyzing />
             )}
 
-            {medications.length >= 2 && primaryInsight && (
+            {!isAnalyzing && analysis && (
               <ResultsPanel
                 key={previewKey}
-                medications={medications}
-                preview={preview}
-                isAnalyzing={isAnalyzing}
+                medications={analysis.medications}
+                preview={analysis.preview}
+                isAnalyzing={false}
               />
+            )}
+
+            {!isAnalyzing && !analysis && (
+              <div className="rounded-xl border border-dashed border-[var(--border)] bg-white px-6 py-12 text-center">
+                {medications.length < 2 ? (
+                  <p className="text-sm font-medium text-[var(--muted)]">
+                    Add at least 2 medications to see how their combination may
+                    affect {currentPatient.name.split(" ")[0]}
+                  </p>
+                ) : (
+                  <p className="flex items-center justify-center gap-2 text-sm font-medium text-[var(--muted)]">
+                    <ScanSearch className="size-4" />
+                    Press Analyze to check interactions for{" "}
+                    {currentPatient.name.split(" ")[0]}
+                  </p>
+                )}
+              </div>
             )}
 
             <PatientHistoryPanel />

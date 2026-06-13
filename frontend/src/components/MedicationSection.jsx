@@ -1,3 +1,6 @@
+import { Loader2, ScanSearch } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/Chip";
 import { SearchCombobox } from "@/components/ui/SearchCombobox";
 import { searchMedications } from "@/lib/data/medications";
@@ -6,8 +9,12 @@ export function MedicationSection({
   medications,
   onAdd,
   onRemove,
+  onAnalyze,
+  isAnalyzing = false,
   disabled = false,
 }) {
+  const canAnalyze = medications.length >= 2 && !isAnalyzing;
+
   return (
     <section
       className="rounded-xl border border-[var(--border)] bg-white p-6 shadow-sm"
@@ -44,11 +51,28 @@ export function MedicationSection({
         </div>
       )}
 
-      {medications.length < 2 && (
-        <p className="mt-4 text-sm text-[var(--muted)]" role="status">
-          Add at least 2 medications to analyze
+      <div className="mt-5 flex flex-col gap-2 border-t border-[var(--border)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-[var(--muted)]" role="status">
+          {medications.length < 2
+            ? `Add ${2 - medications.length} more medication${
+                2 - medications.length === 1 ? "" : "s"
+              } to analyze`
+            : `${medications.length} medications ready — press Analyze`}
         </p>
-      )}
+        <Button
+          type="button"
+          onClick={onAnalyze}
+          disabled={!canAnalyze}
+          className="w-full sm:w-auto"
+        >
+          {isAnalyzing ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <ScanSearch className="size-4" />
+          )}
+          {isAnalyzing ? "Analyzing…" : "Analyze interactions"}
+        </Button>
+      </div>
     </section>
   );
 }
